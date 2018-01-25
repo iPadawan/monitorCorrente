@@ -6,6 +6,7 @@ import argparse
 import logging
 import sqlite3
 import smtplib
+import ConfigParser
 from bs4 import BeautifulSoup
 from time import strftime, mktime
 from datetime import datetime
@@ -13,10 +14,13 @@ from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 
 parser = argparse.ArgumentParser(description='Controlla la presenza della corrente elettrica e segnala eventuali disservizi prolungati.')
-parser.add_argument('--verbose', dest='verbose', action='store_true',
+parser.add_argument('--verbose', '-V', dest='verbose', action='store_true',
                    help='Visualizza a video i valori letti e i messaggi')
 
 args = parser.parse_args()
+
+inifile = ConfigParser.RawConfigParser()
+inifile.read('monitorCorrente.ini')
 
 FORMAT = '%(message)s'
 
@@ -61,7 +65,9 @@ ser = serial.Serial(
     bytesize=serial.EIGHTBITS,\
         timeout=0)
 
-dbPath = '/home/remigio/Script/monitorCorrente/monitorCorrente.db'
+#dbPath = '/home/remigio/Script/monitorCorrente/monitorCorrente.db'
+dbPath = inifile.get('DATABASE','dbFile')
+logging.info("DB File = " + dbPath)
 conn = sqlite3.connect(dbPath)
 cursor = conn.cursor()
 
@@ -77,7 +83,9 @@ while not end:
       for c in ser.read():
           line+=c
           if c == '\n':
-              #print("Line: " + line)
+              logging.info("Line: " + line)
+	      if line.find('</msg>') == -1:
+	          continue
               try:
                   soup=BeautifulSoup(line,'lxml')
                   watts = int(soup.find('watts').get_text())
