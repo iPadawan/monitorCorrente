@@ -79,48 +79,48 @@ line = ""
 
 end=False
 while not end:
-   try:
-      for c in ser.read():
-          line+=c
-          if c == '\n':
-              logging.info("Line: " + line)
-	      if line.find('</msg>') == -1:
-	          continue
-              try:
-                  soup=BeautifulSoup(line,'lxml')
-                  watts = int(soup.find('watts').get_text())
-                  temp = float(soup.find('tmpr').get_text())
-              except Exception as e1:
-                  logging.info("Error in xml parsing:" + str(e1))
-                  end = True
-                  break
-              orario = datetime.now()
-              logging.info("Time = " + strftime("%d.%m.%Y %H:%M:%S", orario.timetuple()))
-              logging.info("Watts = " + str(watts))
-              logging.info("Temp = " + str(temp))
-              try:
-                  cursor.execute("select valore from parametri where parametro='Ultima lettura'")
-                  ultimaLettura = int(cursor.fetchone()[0])
-                  logging.info("Ultima lettura = " + str(ultimaLettura))
-                  cursor.execute("select valore from parametri where parametro='Orario ultima lettura'")
-                  orarioUltimaLettura = datetime.strptime(cursor.fetchone()[0], "%d.%m.%Y %H:%M:%S")
-                  logging.info("Orario Ultima lettura = " + str(orarioUltimaLettura))
-                  gapMisure = int((mktime(orario.timetuple()) - mktime(orarioUltimaLettura.timetuple())) / 60)
-                  logging.info("Minuti da ultima misura = " + str(gapMisure))
-		  if ultimaLettura == 0:
-		  	if watts == 0:
-			  	sendMail(['remigio.armano@gmail.com'], 'ATTENZIONE: assenza corrente', 'Monitor corrente ha rilevato l''assenza di corrente da ' + str(gapMisure) + ' minuti. \nA breve verrà effettuato lo shutdown dei sistemi Home')
-			else:
-			  	sendMail(['remigio.armano@gmail.com'], 'ATTENZIONE: corrente ripristinata', 'Monitor corrente ha rilevato il ripristino della linea elettrica.\n\nI sistemi non sono stati spenti')
-		  cursor.execute("update parametri set valore = ? where parametro='Ultima lettura'", [str(watts)])
-		  cursor.execute("update parametri set valore = ? where parametro='Orario ultima lettura'", [strftime("%d.%m.%Y %H:%M:%S", orario.timetuple())])
-		  conn.commit()
-              except Exception as e2:
-                  logging.info("Error in SQLite block: " + str(e2))
-              end = True
-              line = ""
-   except serial.serialutil.SerialException:
-      pass
+    try:
+        for c in ser.read():
+            line+=c
+            if c == '\n':
+                logging.info("Line: " + line)
+                if line.find('</msg>') == -1:
+                    continue
+                try:
+                    soup=BeautifulSoup(line,'lxml')
+                    watts = int(soup.find('watts').get_text())
+                    temp = float(soup.find('tmpr').get_text())
+                except Exception as e1:
+                    logging.info("Error in xml parsing:" + str(e1))
+                    end = True
+                    break
+                orario = datetime.now()
+                logging.info("Time = " + strftime("%d.%m.%Y %H:%M:%S", orario.timetuple()))
+                logging.info("Watts = " + str(watts))
+                logging.info("Temp = " + str(temp))
+                try:
+                    cursor.execute("select valore from parametri where parametro='Ultima lettura'")
+                    ultimaLettura = int(cursor.fetchone()[0])
+                    logging.info("Ultima lettura = " + str(ultimaLettura))
+                    cursor.execute("select valore from parametri where parametro='Orario ultima lettura'")
+                    orarioUltimaLettura = datetime.strptime(cursor.fetchone()[0], "%d.%m.%Y %H:%M:%S")
+                    logging.info("Orario Ultima lettura = " + str(orarioUltimaLettura))
+                    gapMisure = int((mktime(orario.timetuple()) - mktime(orarioUltimaLettura.timetuple())) / 60)
+                    logging.info("Minuti da ultima misura = " + str(gapMisure))
+                    if ultimaLettura == 0:
+                        if watts == 0:
+                            sendMail(['remigio.armano@gmail.com'], 'ATTENZIONE: assenza corrente', 'Monitor corrente ha rilevato l''assenza di corrente da ' + str(gapMisure) + ' minuti. \nA breve verrà effettuato lo shutdown dei sistemi Home')
+                        else:
+                            sendMail(['remigio.armano@gmail.com'], 'ATTENZIONE: corrente ripristinata', 'Monitor corrente ha rilevato il ripristino della linea elettrica.\n\nI sistemi non sono stati spenti')
+                    cursor.execute("update parametri set valore = ? where parametro='Ultima lettura'", [str(watts)])
+                    cursor.execute("update parametri set valore = ? where parametro='Orario ultima lettura'", [strftime("%d.%m.%Y %H:%M:%S", orario.timetuple())])
+                    conn.commit()
+                except Exception as e2:
+                      logging.info("Error in SQLite block: " + str(e2))
+                end = True
+                line = ""
+    except serial.serialutil.SerialException:
+        pass
 
 ser.close()
 cursor.close()
